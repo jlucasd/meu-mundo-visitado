@@ -9,6 +9,8 @@ interface CountryState {
   toggleVisited: (id: string) => void
   toggleWishlist: (id: string) => void
   statusOf: (id: string) => CountryStatus
+  /** substitui o estado inteiro (usado ao carregar dados da nuvem) */
+  hydrate: (visited: string[], wishlist: string[]) => void
   reset: () => void
 }
 
@@ -50,6 +52,12 @@ export const useCountryStore = create<CountryState>()(
         if (s.wishlist.includes(id)) return 'wishlist'
         return 'none'
       },
+
+      hydrate: (visited, wishlist) =>
+        set({
+          visited: visited.filter(isCountry),
+          wishlist: wishlist.filter(isCountry),
+        }),
 
       reset: () => set({ visited: [], wishlist: [] }),
     }),

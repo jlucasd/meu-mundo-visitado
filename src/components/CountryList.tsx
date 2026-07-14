@@ -68,6 +68,19 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
             </button>
           ))}
         </div>
+
+        <div className="flex items-center gap-4 pt-1 font-mono text-[10px] text-dim">
+          <span className="flex items-center gap-1.5">
+            <span className="flex h-4 w-4 items-center justify-center border border-neon bg-neon text-[9px] text-ink">
+              ✓
+            </span>
+            visitado
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="text-base leading-none text-gold">★</span>
+            quero visitar
+          </span>
+        </div>
       </div>
 
       <ul className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
@@ -112,13 +125,21 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
               <button
                 onClick={() => toggleWishlist(c.id)}
                 disabled={isVisited}
-                title={isWishlist ? 'Remover da wishlist' : 'Quero visitar'}
+                title={
+                  isVisited
+                    ? 'Já visitado'
+                    : isWishlist
+                      ? 'Remover de "quero visitar"'
+                      : 'Marcar como "quero visitar"'
+                }
                 aria-pressed={isWishlist}
-                className={`shrink-0 text-lg transition-colors disabled:opacity-20 ${
-                  isWishlist ? 'text-gold' : 'text-line hover:text-gold'
+                className={`flex h-7 w-7 shrink-0 items-center justify-center text-lg transition-all disabled:opacity-20 ${
+                  isWishlist
+                    ? 'text-gold drop-shadow-[0_0_6px_rgba(255,200,87,0.6)]'
+                    : 'text-dim hover:scale-110 hover:text-gold'
                 }`}
               >
-                ★
+                {isWishlist ? '★' : '☆'}
               </button>
             </li>
           )

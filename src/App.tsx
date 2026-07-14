@@ -1,10 +1,13 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import GlobeView from './components/GlobeView'
 import MapView from './components/MapView'
 import CountryList from './components/CountryList'
 import StatsPanel from './components/StatsPanel'
 import ShareCard from './components/ShareCard'
+import AuthBar from './components/AuthBar'
 import { useCountryStore } from './store/useCountryStore'
+import { useAuthStore } from './store/useAuthStore'
+import { useCloudSync, type SyncStatus } from './hooks/useCloudSync'
 import { TOTAL_COUNTRIES } from './data/countries'
 import type { ViewMode } from './types'
 
@@ -23,7 +26,15 @@ export default function App() {
   const [tab, setTab] = useState<PanelTab>('paises')
   const [shareOpen, setShareOpen] = useState(false)
   const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const visitedCount = useCountryStore((s) => s.visited.length)
+  const initAuth = useAuthStore((s) => s.init)
+
+  useEffect(() => {
+    initAuth()
+  }, [initAuth])
+
+  useCloudSync(setSyncStatus)
 
   const focusCountry = useCallback((lat: number, lng: number) => {
     setFlyTarget({ lat, lng, ts: Date.now() })
@@ -77,6 +88,7 @@ export default function App() {
           panelOpen ? 'translate-x-0' : 'translate-x-full'
         } md:translate-x-0`}
       >
+        <AuthBar syncStatus={syncStatus} />
         <nav className="flex shrink-0 border-b border-line">
           {(
             [

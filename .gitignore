@@ -7,3 +7,8 @@ dev-dist
 !.env.example
 .DS_Store
 .vercel
+
+# assinatura Android (nunca commitar)
+android/keystore/
+android/keystore.properties
+*.apk

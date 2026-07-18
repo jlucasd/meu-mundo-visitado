@@ -59,6 +59,31 @@ giratório estilo Google Earth como interface principal.
 > servidor; é um trade-off consciente para um app pessoal. A seed do admin é
 > visível no bundle — troque a senha criando outro admin no painel.
 
+## App Android (APK via Capacitor)
+
+A parte web continua intocada — o Capacitor embute o build (`dist/`) num app
+nativo Android (WebView). O projeto nativo fica em `android/`.
+
+```bash
+npm run build                 # gera dist/
+npx cap sync android          # copia dist/ para o projeto Android
+cd android
+ANDROID_HOME=~/Android/sdk ./gradlew assembleRelease   # APK assinado
+# saída: android/app/build/outputs/apk/release/app-release.apk
+```
+
+- Requisitos: JDK 17+, Android SDK (platform 34 + build-tools 34) — instalável
+  sem root via `sdkmanager` em `~/Android/sdk`.
+- A assinatura usa `android/keystore/meu-mundo.keystore` com credenciais em
+  `android/keystore.properties` (**fora do git** — faça backup dos dois; sem
+  eles não dá para publicar atualizações do app).
+- Ícones/splash nativos são gerados de `assets/` com
+  `npx @capacitor/assets generate --android`.
+
+**iPhone**: APK não existe no iOS. O app já é um PWA instalável no iPhone via
+Safari → Compartilhar → **Adicionar à Tela de Início**. Um app iOS nativo
+(via `@capacitor/ios`) exigiria um Mac com Xcode e conta Apple Developer.
+
 ## Idiomas
 
 Português (padrão), English e Español. A troca é feita pelas bandeiras na tela

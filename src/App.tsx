@@ -7,7 +7,8 @@ import ShareCard from './components/ShareCard'
 import LoginScreen from './components/LoginScreen'
 import UserAdminPanel from './components/UserAdminPanel'
 import { AuthProvider, useAuth } from './auth/AuthContext'
-import { useUserCountries } from './hooks/useUserCountries'
+import { LangProvider, useLang } from './i18n'
+import { useUserCountries, type SyncStatus } from './hooks/useUserCountries'
 import { useCountryStore } from './store/useCountryStore'
 import { TOTAL_COUNTRIES } from './data/countries'
 import type { ViewMode } from './types'
@@ -23,15 +24,17 @@ type PanelTab = 'paises' | 'stats' | 'usuarios'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Root />
-    </AuthProvider>
+    <LangProvider>
+      <AuthProvider>
+        <Root />
+      </AuthProvider>
+    </LangProvider>
   )
 }
 
 function Root() {
   const { user, loading } = useAuth()
-  useUserCountries(user)
+  const syncStatus = useUserCountries(user)
 
   if (loading) {
     return (
@@ -42,11 +45,12 @@ function Root() {
   }
   // tela de login é a primeira tela: nada é acessível sem autenticação
   if (!user) return <LoginScreen />
-  return <MainApp />
+  return <MainApp syncStatus={syncStatus} />
 }
 
-function MainApp() {
+function MainApp({ syncStatus }: { syncStatus: SyncStatus }) {
   const { user, signOut } = useAuth()
+  const { t } = useLang()
   const [view, setView] = useState<ViewMode>('globe')
   const [panelOpen, setPanelOpen] = useState(false)
   const [tab, setTab] = useState<PanelTab>('paises')
@@ -56,9 +60,9 @@ function MainApp() {
 
   const isAdmin = user?.role === 'admin'
   const tabs: [PanelTab, string][] = [
-    ['paises', 'Países'],
-    ['stats', 'Estatísticas'],
-    ...(isAdmin ? ([['usuarios', 'Usuários']] as [PanelTab, string][]) : []),
+    ['paises', t.tabs.countries],
+    ['stats', t.tabs.stats],
+    ...(isAdmin ? ([['usuarios', t.tabs.users]] as [PanelTab, string][]) : []),
   ]
 
   const focusCountry = useCallback((lat: number, lng: number) => {
@@ -77,12 +81,15 @@ function MainApp() {
         <div className="flex items-center gap-3">
           <img src="/icons/logo.svg" alt="" className="h-8 w-auto" />
           <h1 className="text-xl font-bold uppercase tracking-widest md:text-2xl">
-            Meu Mundo <span className="text-neon">Visitado</span>
+            {t.brand.first} <span className="text-neon">{t.brand.highlight}</span>
           </h1>
         </div>
         <p className="mt-1 font-mono text-xs text-dim md:text-sm">
-          <span className="font-bold text-neon">{visitedCount}</span> / {TOTAL_COUNTRIES}{' '}
-          países · {((visitedCount / TOTAL_COUNTRIES) * 100).toFixed(1)}% do mundo
+          {t.header.progress(
+            visitedCount,
+            TOTAL_COUNTRIES,
+            ((visitedCount / TOTAL_COUNTRIES) * 100).toFixed(1),
+          )}
         </p>
         <p className="pointer-events-auto mt-1 font-mono text-[11px] text-dim">
           {user?.email}
@@ -91,7 +98,7 @@ function MainApp() {
             onClick={() => void signOut()}
             className="underline decoration-dotted underline-offset-2 transition-colors hover:text-red-400"
           >
-            sair
+            {t.header.signOut}
           </button>
         </p>
       </header>
@@ -102,13 +109,13 @@ function MainApp() {
           onClick={() => setView((v) => (v === 'globe' ? 'map' : 'globe'))}
           className="border border-line bg-panel/90 px-4 py-2 font-mono text-xs uppercase tracking-wider text-white backdrop-blur transition-colors hover:border-neon hover:text-neon"
         >
-          {view === 'globe' ? '🗺 Mapa 2D' : '🌐 Globo 3D'}
+          {view === 'globe' ? t.controls.map2d : t.controls.globe3d}
         </button>
         <button
           onClick={() => setShareOpen(true)}
           className="border border-line bg-panel/90 px-4 py-2 font-mono text-xs uppercase tracking-wider text-white backdrop-blur transition-colors hover:border-gold hover:text-gold"
         >
-          ↗ Compartilhar
+          {t.controls.share}
         </button>
       </div>
 
@@ -117,7 +124,7 @@ function MainApp() {
         onClick={() => setPanelOpen((o) => !o)}
         className="absolute bottom-4 right-4 z-30 border border-neon bg-panel/90 px-4 py-2 font-mono text-xs uppercase tracking-wider text-neon shadow-neon backdrop-blur md:hidden"
       >
-        {panelOpen ? '✕ Fechar' : '☰ Menu'}
+        {panelOpen ? t.controls.close : t.controls.menu}
       </button>
 
       {/* painel lateral */}
@@ -132,19 +139,20 @@ function MainApp() {
             <p className="truncate font-mono text-[11px] text-white" title={user?.email}>
               {user?.email}
             </p>
-            <p
-              className={`font-mono text-[10px] uppercase tracking-wider ${
-                isAdmin ? 'text-gold' : 'text-dim'
-              }`}
-            >
-              {user?.role}
+            <p className="font-mono text-[10px] text-dim">
+              <span
+                className={`uppercase tracking-wider ${isAdmin ? 'text-gold' : ''}`}
+              >
+                {isAdmin ? t.roles.admin : t.roles.user}
+              </span>{' '}
+              · {t.sync[syncStatus]}
             </p>
           </div>
           <button
             onClick={() => void signOut()}
             className="shrink-0 border border-line px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-dim transition-colors hover:border-red-500 hover:text-red-400"
           >
-            Sair
+            {t.header.signOut}
           </button>
         </div>
 

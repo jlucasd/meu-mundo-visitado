@@ -1,15 +1,23 @@
 import { useMemo, useState } from 'react'
 import { continents, countries } from '../data/countries'
 import { useCountryStore } from '../store/useCountryStore'
+import { useLang } from '../i18n'
 import type { CountryProperties } from '../types'
 
 interface CountryListProps {
   onFocusCountry: (country: CountryProperties) => void
 }
 
+const normalize = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+
 export default function CountryList({ onFocusCountry }: CountryListProps) {
   const [search, setSearch] = useState('')
   const [continent, setContinent] = useState<string>('')
+  const { t, lang, countryName } = useLang()
 
   const visited = useCountryStore((s) => s.visited)
   const wishlist = useCountryStore((s) => s.wishlist)
@@ -17,21 +25,20 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
   const toggleWishlist = useCountryStore((s) => s.toggleWishlist)
 
   const filtered = useMemo(() => {
-    const q = search
-      .trim()
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/\p{Diacritic}/gu, '')
-    return countries.filter((c) => {
-      if (continent && c.continent !== continent) return false
-      if (!q) return true
-      const name = c.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-      return name.includes(q) || c.nameEn.toLowerCase().includes(q)
-    })
-  }, [search, continent])
+    const q = normalize(search.trim())
+    return countries
+      .filter((c) => {
+        if (continent && c.continent !== continent) return false
+        if (!q) return true
+        // busca nos três idiomas, ignorando acentos
+        return (
+          normalize(c.name).includes(q) ||
+          normalize(c.nameEn).includes(q) ||
+          normalize(c.nameEs).includes(q)
+        )
+      })
+      .sort((a, b) => countryName(a).localeCompare(countryName(b), lang))
+  }, [search, continent, countryName, lang])
 
   return (
     <div className="flex h-full flex-col">
@@ -40,7 +47,7 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar país…"
+          placeholder={t.list.searchPlaceholder}
           className="w-full border border-line bg-ink px-3 py-2 font-mono text-sm text-white placeholder:text-dim focus:border-neon focus:outline-none"
         />
         <div className="flex flex-wrap gap-1">
@@ -52,7 +59,7 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
                 : 'border border-line text-dim hover:text-white'
             }`}
           >
-            Todos
+            {t.list.all}
           </button>
           {continents.map((c) => (
             <button
@@ -64,7 +71,7 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
                   : 'border border-line text-dim hover:text-white'
               }`}
             >
-              {c}
+              {t.continents[c] ?? c}
             </button>
           ))}
         </div>
@@ -74,11 +81,11 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
             <span className="flex h-4 w-4 items-center justify-center border border-neon bg-neon text-[9px] text-ink">
               ✓
             </span>
-            visitado
+            {t.list.legendVisited}
           </span>
           <span className="flex items-center gap-1.5">
             <span className="text-base leading-none text-gold">★</span>
-            quero visitar
+            {t.list.legendWishlist}
           </span>
         </div>
       </div>
@@ -96,7 +103,7 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
             >
               <button
                 onClick={() => toggleVisited(c.id)}
-                title={isVisited ? 'Desmarcar visitado' : 'Marcar como visitado'}
+                title={isVisited ? t.list.unmarkVisited : t.list.markVisited}
                 aria-pressed={isVisited}
                 className={`flex h-6 w-6 shrink-0 items-center justify-center border text-sm transition-all ${
                   isVisited
@@ -109,17 +116,17 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
               <button
                 onClick={() => onFocusCountry(c)}
                 className="min-w-0 flex-1 text-left"
-                title={`Voar até ${c.name}`}
+                title={t.list.flyTo(countryName(c))}
               >
                 <span
                   className={`block truncate text-sm ${
                     isVisited ? 'font-bold text-neon' : isWishlist ? 'text-gold' : ''
                   }`}
                 >
-                  {c.name}
+                  {countryName(c)}
                 </span>
                 <span className="block font-mono text-[10px] uppercase tracking-wider text-dim">
-                  {c.continent}
+                  {t.continents[c.continent] ?? c.continent}
                 </span>
               </button>
               <button
@@ -127,10 +134,10 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
                 disabled={isVisited}
                 title={
                   isVisited
-                    ? 'Já visitado'
+                    ? t.list.alreadyVisited
                     : isWishlist
-                      ? 'Remover de "quero visitar"'
-                      : 'Marcar como "quero visitar"'
+                      ? t.list.removeWishlist
+                      : t.list.addWishlist
                 }
                 aria-pressed={isWishlist}
                 className={`flex h-7 w-7 shrink-0 items-center justify-center text-lg transition-all disabled:opacity-20 ${
@@ -145,9 +152,7 @@ export default function CountryList({ onFocusCountry }: CountryListProps) {
           )
         })}
         {filtered.length === 0 && (
-          <li className="p-6 text-center font-mono text-sm text-dim">
-            Nenhum país encontrado.
-          </li>
+          <li className="p-6 text-center font-mono text-sm text-dim">{t.list.empty}</li>
         )}
       </ul>
     </div>

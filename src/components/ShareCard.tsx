@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { continents, countriesByContinent, TOTAL_COUNTRIES } from '../data/countries'
 import { useCountryStore } from '../store/useCountryStore'
+import { useLang } from '../i18n'
+import type { Messages } from '../i18n/messages'
 
 const SIZE = 1080
 
@@ -8,7 +10,7 @@ interface ShareCardProps {
   onClose: () => void
 }
 
-function drawCard(canvas: HTMLCanvasElement, visited: string[]) {
+function drawCard(canvas: HTMLCanvasElement, visited: string[], t: Messages) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
   const percent = (visited.length / TOTAL_COUNTRIES) * 100
@@ -34,9 +36,9 @@ function drawCard(canvas: HTMLCanvasElement, visited: string[]) {
   ctx.fillStyle = '#ffffff'
   ctx.font = 'bold 52px "Space Grotesk", sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('MEU MUNDO', SIZE / 2, 150)
+  ctx.fillText(t.brand.first.toUpperCase(), SIZE / 2, 150)
   ctx.fillStyle = '#00e5ff'
-  ctx.fillText('VISITADO', SIZE / 2, 212)
+  ctx.fillText(t.brand.highlight.toUpperCase(), SIZE / 2, 212)
 
   // número gigante
   ctx.fillStyle = '#00e5ff'
@@ -48,7 +50,7 @@ function drawCard(canvas: HTMLCanvasElement, visited: string[]) {
 
   ctx.fillStyle = '#8b8b9e'
   ctx.font = '36px "JetBrains Mono", monospace'
-  ctx.fillText(`de ${TOTAL_COUNTRIES} países · ${percent.toFixed(1)}% do mundo`, SIZE / 2, 570)
+  ctx.fillText(t.share.cardSubtitle(TOTAL_COUNTRIES, percent.toFixed(1)), SIZE / 2, 570)
 
   // barra de progresso
   const barX = 140
@@ -66,7 +68,7 @@ function drawCard(canvas: HTMLCanvasElement, visited: string[]) {
     const count = all.filter((c) => visited.includes(c.id)).length
     ctx.fillStyle = '#ffffff'
     ctx.font = '28px "Space Grotesk", sans-serif'
-    ctx.fillText(cont, barX, y)
+    ctx.fillText(t.continents[cont] ?? cont, barX, y)
     ctx.fillStyle = count > 0 ? '#00e5ff' : '#8b8b9e'
     ctx.font = 'bold 28px "JetBrains Mono", monospace'
     ctx.textAlign = 'right'
@@ -85,20 +87,21 @@ function drawCard(canvas: HTMLCanvasElement, visited: string[]) {
   ctx.fillStyle = '#8b8b9e'
   ctx.font = '24px "JetBrains Mono", monospace'
   ctx.textAlign = 'center'
-  ctx.fillText('meu-mundo-visitado', SIZE / 2, SIZE - 44)
+  ctx.fillText('meu-mundo-visitado.vercel.app', SIZE / 2, SIZE - 44)
 }
 
 export default function ShareCard({ onClose }: ShareCardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const visited = useCountryStore((s) => s.visited)
+  const { t } = useLang()
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     // garante que as fontes web já estão disponíveis antes de desenhar
-    document.fonts.ready.then(() => drawCard(canvas, visited))
-    drawCard(canvas, visited)
-  }, [visited])
+    document.fonts.ready.then(() => drawCard(canvas, visited, t))
+    drawCard(canvas, visited, t)
+  }, [visited, t])
 
   const download = () => {
     const canvas = canvasRef.current
@@ -119,8 +122,11 @@ export default function ShareCard({ onClose }: ShareCardProps) {
         try {
           await navigator.share({
             files: [file],
-            title: 'Meu Mundo Visitado',
-            text: `Já visitei ${visited.length} países, ${((visited.length / TOTAL_COUNTRIES) * 100).toFixed(1)}% do mundo! 🌍`,
+            title: `${t.brand.first} ${t.brand.highlight}`,
+            text: t.share.shareText(
+              visited.length,
+              ((visited.length / TOTAL_COUNTRIES) * 100).toFixed(1),
+            ),
           })
         } catch {
           // usuário cancelou o compartilhamento
@@ -142,12 +148,12 @@ export default function ShareCard({ onClose }: ShareCardProps) {
       >
         <div className="flex items-center justify-between">
           <h2 className="font-mono text-sm uppercase tracking-widest text-neon">
-            Compartilhar
+            {t.share.title}
           </h2>
           <button
             onClick={onClose}
             className="font-mono text-dim transition-colors hover:text-white"
-            aria-label="Fechar"
+            aria-label={t.share.close}
           >
             ✕
           </button>
@@ -163,13 +169,13 @@ export default function ShareCard({ onClose }: ShareCardProps) {
             onClick={download}
             className="flex-1 border border-neon px-4 py-2 font-mono text-xs uppercase tracking-wider text-neon transition-colors hover:bg-neon hover:text-ink"
           >
-            ⬇ Baixar PNG
+            {t.share.download}
           </button>
           <button
             onClick={share}
             className="flex-1 border border-gold px-4 py-2 font-mono text-xs uppercase tracking-wider text-gold transition-colors hover:bg-gold hover:text-ink"
           >
-            ↗ Compartilhar
+            {t.share.shareBtn}
           </button>
         </div>
       </div>

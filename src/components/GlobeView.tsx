@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Globe, { GlobeMethods } from 'react-globe.gl'
 import { countryFeatures } from '../data/countries'
 import { useCountryStore } from '../store/useCountryStore'
+import { useLang } from '../i18n'
 import type { CountryFeature } from '../types'
 import type { FlyTarget } from '../App'
 
@@ -16,10 +17,10 @@ const COLORS = {
   side: 'rgba(0, 229, 255, 0.05)',
 }
 
-const STATUS_LABEL = {
-  visited: '<span style="color:#00e5ff">✓ visitado</span>',
-  wishlist: '<span style="color:#ffc857">★ quero visitar</span>',
-  none: '<span style="color:#8b8b9e">não visitado</span>',
+const STATUS_COLOR = {
+  visited: '#00e5ff',
+  wishlist: '#ffc857',
+  none: '#8b8b9e',
 } as const
 
 interface GlobeViewProps {
@@ -37,6 +38,7 @@ export default function GlobeView({ flyTarget }: GlobeViewProps) {
   const visited = useCountryStore((s) => s.visited)
   const wishlist = useCountryStore((s) => s.wishlist)
   const toggleVisited = useCountryStore((s) => s.toggleVisited)
+  const { t, countryName } = useLang()
 
   const visitedSet = useMemo(() => new Set(visited), [visited])
   const wishlistSet = useMemo(() => new Set(wishlist), [wishlist])
@@ -133,10 +135,11 @@ export default function GlobeView({ flyTarget }: GlobeViewProps) {
           polygonStrokeColor={() => COLORS.stroke}
           polygonsTransitionDuration={250}
           polygonLabel={(f) => {
-            const p = (f as CountryFeature).properties
+            const feature = f as CountryFeature
+            const status = statusOf(feature)
             return `
               <div style="background:#0d0d14;border:1px solid #1e1e2a;padding:6px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#fff;white-space:nowrap">
-                <b>${p.name}</b><br/>${STATUS_LABEL[statusOf(f as CountryFeature)]}
+                <b>${countryName(feature.properties)}</b><br/><span style="color:${STATUS_COLOR[status]}">${t.status[status]}</span>
               </div>`
           }}
           onPolygonClick={(f) => toggleVisited((f as CountryFeature).properties.id)}

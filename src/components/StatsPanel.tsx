@@ -7,6 +7,7 @@ import {
   TOTAL_COUNTRIES,
 } from '../data/countries'
 import { useCountryStore } from '../store/useCountryStore'
+import { useLang } from '../i18n'
 
 /** área esférica (esterradianos) de cada país, calculada uma vez */
 const areaById = new Map<string, number>(
@@ -20,6 +21,7 @@ export default function StatsPanel() {
   const visited = useCountryStore((s) => s.visited)
   const wishlist = useCountryStore((s) => s.wishlist)
   const reset = useCountryStore((s) => s.reset)
+  const { t } = useLang()
 
   const percent = (visited.length / TOTAL_COUNTRIES) * 100
 
@@ -42,7 +44,7 @@ export default function StatsPanel() {
     <div className="scrollbar-thin h-full overflow-y-auto p-4">
       <div className="border border-line bg-ink/60 p-4">
         <p className="font-mono text-[10px] uppercase tracking-widest text-dim">
-          Países visitados
+          {t.stats.visitedCountries}
         </p>
         <p className="mt-1 text-4xl font-bold">
           <span className="text-neon">{visited.length}</span>
@@ -55,27 +57,28 @@ export default function StatsPanel() {
           />
         </div>
         <p className="mt-2 font-mono text-xs text-dim">
-          <span className="text-neon">{percent.toFixed(1)}%</span> do mundo ·{' '}
-          <span className="text-neon">{landPercent.toFixed(1)}%</span> da área terrestre
+          <span className="text-neon">{percent.toFixed(1)}%</span> {t.stats.ofWorld} ·{' '}
+          <span className="text-neon">{landPercent.toFixed(1)}%</span>{' '}
+          {t.stats.ofLandArea}
         </p>
       </div>
 
       <div className="mt-3 border border-line bg-ink/60 p-4">
         <p className="font-mono text-[10px] uppercase tracking-widest text-dim">
-          Quero visitar
+          {t.stats.wishlist}
         </p>
         <p className="mt-1 text-2xl font-bold text-gold">{wishlist.length}</p>
       </div>
 
       <div className="mt-3 border border-line bg-ink/60 p-4">
         <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-dim">
-          Por continente
+          {t.stats.byContinent}
         </p>
         <ul className="space-y-3">
           {byContinent.map(({ continent, count, total }) => (
             <li key={continent}>
               <div className="flex items-baseline justify-between">
-                <span className="text-sm">{continent}</span>
+                <span className="text-sm">{t.continents[continent] ?? continent}</span>
                 <span className="font-mono text-xs text-dim">
                   <span className={count > 0 ? 'font-bold text-neon' : ''}>{count}</span>
                   /{total}
@@ -94,11 +97,11 @@ export default function StatsPanel() {
 
       <button
         onClick={() => {
-          if (window.confirm('Apagar todos os países marcados?')) reset()
+          if (window.confirm(t.stats.resetConfirm)) reset()
         }}
         className="mt-4 w-full border border-line px-4 py-2 font-mono text-xs uppercase tracking-wider text-dim transition-colors hover:border-red-500 hover:text-red-400"
       >
-        Zerar progresso
+        {t.stats.reset}
       </button>
     </div>
   )

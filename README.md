@@ -9,7 +9,9 @@ giratório estilo Google Earth como interface principal.
 - **react-globe.gl** (three.js) — globo 3D interativo
 - **d3-geo** — mapa 2D (projeção Natural Earth) e cálculo de área terrestre
 - **Zustand** — estado global (o mapa é persistido por usuário logado)
-- **Autenticação local** — login obrigatório, usuários com senha hasheada (PBKDF2-SHA-256 via Web Crypto), sessão persistida e painel de administração
+- **Supabase (Postgres)** — banco na nuvem para usuários e mapas por usuário, com fallback automático para o armazenamento local do navegador
+- **Autenticação própria** — login obrigatório, usuários com senha hasheada (PBKDF2-SHA-256 via Web Crypto), sessão persistida e painel de administração
+- **i18n** — português (padrão), inglês e espanhol; bandeiras na tela de login; nomes dos países nos três idiomas (Natural Earth)
 - **Tailwind CSS 3** — estética Dark Tech Brutalist (fundo escuro, ciano neon `#00e5ff`, dourado `#ffc857`)
 - **vite-plugin-pwa** — manifest + service worker (instalável, funciona offline)
 - **Natural Earth 110m** — GeoJSON de 177 países embutido localmente (`src/data/countries.geo.json`), com nomes em português, códigos ISO-3166 e continentes
@@ -38,15 +40,30 @@ giratório estilo Google Earth como interface principal.
 - Cada usuário tem ID único (`crypto.randomUUID()`); a sessão é validada a cada
   carga e o logout a limpa (o botão "voltar" não reexpõe conteúdo protegido,
   pois o gate de autenticação roda em toda renderização).
-- Persistência via adapter `src/lib/storage.ts` (interface `get/set/list/delete`;
-  usa `window.storage` quando disponível, senão `localStorage`), com chaves
-  `mmv:user:{id}`, `mmv:session` e `mmv:countries:{userId}`.
+- **Armazenamento**: com o Supabase configurado, usuários ficam na tabela
+  `app_users` e os mapas em `user_countries` (uma linha por usuário, FK com
+  cascade). Sem Supabase (ou offline), tudo cai para o armazenamento local do
+  navegador via `src/lib/storage.ts` — a barra do painel mostra a origem
+  ("☁ sincronizado na nuvem" ou "salvo neste navegador").
 
-> ⚠️ **Limitação honesta**: o app é 100% client-side — usuários, hashes e dados
-> vivem no storage do navegador. Isso organiza contas e protege a UX, mas não é
-> segurança de servidor (a seed do admin é visível no bundle). Para múltiplos
-> dispositivos/segurança real, o caminho é um backend (ex.: Supabase com
-> funções server-side), que já existiu neste repo — ver histórico do git.
+### Configurar o Supabase
+
+1. No **SQL Editor** do painel do Supabase, rode [`supabase/schema.sql`](supabase/schema.sql)
+   (atenção: substitui a tabela `user_countries` antiga).
+2. Local: crie `.env.local` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
+3. Vercel: as mesmas variáveis em Settings → Environment Variables.
+
+> ⚠️ **Limitação honesta**: o login roda no cliente com a chave anon — as
+> políticas do banco liberam leitura/escrita para quem tiver URL + anon key.
+> As senhas ficam protegidas por hash (PBKDF2), mas isso não é segurança de
+> servidor; é um trade-off consciente para um app pessoal. A seed do admin é
+> visível no bundle — troque a senha criando outro admin no painel.
+
+## Idiomas
+
+Português (padrão), English e Español. A troca é feita pelas bandeiras na tela
+de login e vale para toda a interface, incluindo nomes de países e continentes.
+Dicionários em `src/i18n/messages.ts`; preferência salva em `mmv:lang`.
 
 ## Rodando localmente
 

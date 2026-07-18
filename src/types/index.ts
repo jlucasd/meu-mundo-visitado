@@ -9,6 +9,8 @@ export interface CountryProperties {
   name: string
   /** Nome em inglês */
   nameEn: string
+  /** Nome em espanhol */
+  nameEs: string
   /** Continente em português */
   continent: string
   /** Centróide (ponto de rótulo do Natural Earth) */

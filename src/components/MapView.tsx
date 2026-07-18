@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { geoNaturalEarth1, geoPath, geoGraticule10 } from 'd3-geo'
 import { countryFeatures } from '../data/countries'
 import { useCountryStore } from '../store/useCountryStore'
+import { useLang } from '../i18n'
 import type { CountryFeature } from '../types'
 
 const FILL = {
@@ -25,6 +26,7 @@ export default function MapView() {
   const visited = useCountryStore((s) => s.visited)
   const wishlist = useCountryStore((s) => s.wishlist)
   const toggleVisited = useCountryStore((s) => s.toggleVisited)
+  const { t, countryName } = useLang()
 
   const visitedSet = useMemo(() => new Set(visited), [visited])
   const wishlistSet = useMemo(() => new Set(wishlist), [wishlist])
@@ -63,11 +65,6 @@ export default function MapView() {
         ? 'wishlist'
         : 'none'
 
-  const STATUS_TEXT = {
-    visited: '✓ visitado',
-    wishlist: '★ quero visitar',
-    none: 'não visitado',
-  } as const
 
   return (
     <div ref={containerRef} className="relative flex h-full w-full items-center justify-center">
@@ -91,8 +88,8 @@ export default function MapView() {
                   setTooltip({
                     x: e.clientX,
                     y: e.clientY,
-                    name: feature.properties.name,
-                    status: STATUS_TEXT[status],
+                    name: countryName(feature.properties),
+                    status: t.status[status],
                   })
                 }
                 onMouseLeave={() => setTooltip(null)}

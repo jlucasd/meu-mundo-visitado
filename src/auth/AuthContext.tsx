@@ -62,8 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const createUser = useCallback(
     async (email: string, password: string, role: Role): Promise<AuthResult> => {
-      if (user?.role !== 'admin')
-        return { ok: false, message: 'Apenas administradores podem criar usuários.' }
+      if (user?.role !== 'admin') return { ok: false, error: 'auth/not-admin' }
       return authDb.createUser(email, password, role)
     },
     [user],
@@ -71,10 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const deleteUser = useCallback(
     async (id: string): Promise<AuthResult> => {
-      if (user?.role !== 'admin')
-        return { ok: false, message: 'Apenas administradores podem excluir usuários.' }
-      if (id === user.id)
-        return { ok: false, message: 'Você não pode excluir o próprio usuário logado.' }
+      if (user?.role !== 'admin') return { ok: false, error: 'auth/not-admin' }
+      if (id === user.id) return { ok: false, error: 'auth/self-delete' }
       await authDb.deleteUser(id)
       return { ok: true }
     },

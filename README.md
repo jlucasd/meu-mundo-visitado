@@ -8,8 +8,8 @@ giratório estilo Google Earth como interface principal.
 - **React 18 + TypeScript + Vite 5**
 - **react-globe.gl** (three.js) — globo 3D interativo
 - **d3-geo** — mapa 2D (projeção Natural Earth) e cálculo de área terrestre
-- **Zustand** (+ `persist`) — estado global salvo em `localStorage` sob a chave `meu-mundo-visitado:v1`
-- **Supabase** — autenticação (e-mail/senha) + Postgres para salvar o mapa por usuário
+- **Zustand** — estado global (o mapa é persistido por usuário logado)
+- **Autenticação local** — login obrigatório, usuários com senha hasheada (PBKDF2-SHA-256 via Web Crypto), sessão persistida e painel de administração
 - **Tailwind CSS 3** — estética Dark Tech Brutalist (fundo escuro, ciano neon `#00e5ff`, dourado `#ffc857`)
 - **vite-plugin-pwa** — manifest + service worker (instalável, funciona offline)
 - **Natural Earth 110m** — GeoJSON de 177 países embutido localmente (`src/data/countries.geo.json`), com nomes em português, códigos ISO-3166 e continentes
@@ -22,34 +22,31 @@ giratório estilo Google Earth como interface principal.
 - Vista alternativa em mapa 2D plano
 - Lista pesquisável (ignora acentos, busca em PT e EN) e filtrável por continente
 - **Wishlist** ("quero visitar"): marcada pela **estrela ☆/★** ao lado de cada país na lista, com legenda explicativa. Marcar um país como visitado o remove automaticamente da wishlist
-- **Login/cadastro** (Supabase): o mapa fica salvo na conta e sincroniza entre dispositivos. Sem login, funciona em "modo local" (localStorage)
+- **Login obrigatório**: a tela de login é a primeira tela; nada é acessível sem autenticar. O mapa de cada usuário fica associado à conta dele
+- **Gerenciamento de usuários** (aba "Usuários", visível só para admins): listar, criar (e-mail/senha/role) e excluir usuários (exceto o próprio admin logado)
 - Dashboard: total, %, breakdown por continente e % da área terrestre mundial
 - Card PNG 1080×1080 para compartilhar (download ou Web Share API)
+- **Logo/ícones gerados do mapa real**: `npm run logo` projeta o GeoJSON com d3-geo e gera `logo.svg`/`icon.svg` (com estrela dourada sobre o Brasil)
 
-## Login e banco de dados (Supabase)
+## Autenticação e usuários
 
-O app roda **sem configuração** em modo local (dados só no navegador). Para ligar
-login/cadastro e a sincronização em nuvem:
+- Na primeira inicialização é criado automaticamente o admin padrão
+  (`jlucasd01@gmail.com`) — a senha inicial fica na constante
+  `ADMIN_SEED_PASSWORD` em [`src/lib/authDb.ts`](src/lib/authDb.ts).
+- Senhas nunca são armazenadas em texto plano: PBKDF2-SHA-256 (150k iterações,
+  salt aleatório por usuário) via Web Crypto API.
+- Cada usuário tem ID único (`crypto.randomUUID()`); a sessão é validada a cada
+  carga e o logout a limpa (o botão "voltar" não reexpõe conteúdo protegido,
+  pois o gate de autenticação roda em toda renderização).
+- Persistência via adapter `src/lib/storage.ts` (interface `get/set/list/delete`;
+  usa `window.storage` quando disponível, senão `localStorage`), com chaves
+  `mmv:user:{id}`, `mmv:session` e `mmv:countries:{userId}`.
 
-1. Crie um projeto grátis em [supabase.com](https://supabase.com).
-2. No **SQL Editor**, rode o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) (cria a tabela `user_countries` com Row Level Security por usuário).
-3. Em **Project Settings → API**, copie a *Project URL* e a *anon public key*.
-4. Crie um arquivo `.env.local` na raiz (baseie-se em [`.env.example`](.env.example)):
-
-   ```bash
-   VITE_SUPABASE_URL=https://xxxx.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
-   ```
-
-5. (Opcional) Em **Authentication → Providers → Email**, desligue "Confirm email"
-   para permitir login imediato sem confirmação por e-mail.
-6. No deploy da Vercel, adicione as mesmas duas variáveis em **Settings → Environment Variables** e refaça o deploy.
-
-### Como os dados são salvos
-
-- Uma linha por usuário em `user_countries` (`visited text[]`, `wishlist text[]`).
-- Ao logar pela primeira vez, o que estava marcado no modo local é enviado para a conta.
-- Cada alteração é salva na nuvem com debounce; a barra do painel mostra o status (`salvando…` / `✓ sincronizado`).
+> ⚠️ **Limitação honesta**: o app é 100% client-side — usuários, hashes e dados
+> vivem no storage do navegador. Isso organiza contas e protege a UX, mas não é
+> segurança de servidor (a seed do admin é visível no bundle). Para múltiplos
+> dispositivos/segurança real, o caminho é um backend (ex.: Supabase com
+> funções server-side), que já existiu neste repo — ver histórico do git.
 
 ## Rodando localmente
 
@@ -85,17 +82,26 @@ O service worker e o manifest já saem prontos no build — depois do deploy o a
 
 ```
 src/
+  auth/
+    AuthContext.tsx  # estado de autenticação (useContext) + guards de role
   components/
-    GlobeView.tsx    # globo 3D (react-globe.gl)
-    MapView.tsx      # mapa 2D SVG (d3-geo)
-    CountryList.tsx  # lista pesquisável/filtrável
-    StatsPanel.tsx   # dashboard de estatísticas
-    ShareCard.tsx    # card PNG para redes sociais
+    LoginScreen.tsx    # tela de login (primeira tela obrigatória)
+    UserAdminPanel.tsx # gerenciamento de usuários (só admin)
+    GlobeView.tsx      # globo 3D (react-globe.gl)
+    MapView.tsx        # mapa 2D SVG (d3-geo)
+    CountryList.tsx    # lista pesquisável/filtrável
+    StatsPanel.tsx     # dashboard de estatísticas
+    ShareCard.tsx      # card PNG para redes sociais
   data/
     countries.geo.json  # Natural Earth 110m enxuto (nome PT, ISO, continente, centróide)
     countries.ts        # índices/derivações tipadas
+  hooks/
+    useUserCountries.ts # carrega/salva o mapa do usuário logado
+  lib/
+    authDb.ts    # usuários, hash de senha (PBKDF2), sessão, seed do admin
+    storage.ts   # adapter get/set/list/delete (window.storage ou localStorage)
   store/
-    useCountryStore.ts  # Zustand + persist (localStorage)
+    useCountryStore.ts  # Zustand (visited/wishlist)
   types/index.ts
 ```
 

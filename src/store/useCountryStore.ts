@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { CountryStatus } from '../types'
 import { isCountry } from '../data/countries'
 
@@ -9,62 +8,55 @@ interface CountryState {
   toggleVisited: (id: string) => void
   toggleWishlist: (id: string) => void
   statusOf: (id: string) => CountryStatus
-  /** substitui o estado inteiro (usado ao carregar dados da nuvem) */
+  /** substitui o estado inteiro (usado ao carregar o mapa do usuário logado) */
   hydrate: (visited: string[], wishlist: string[]) => void
   reset: () => void
 }
 
-export const useCountryStore = create<CountryState>()(
-  persist(
-    (set, get) => ({
-      visited: [],
-      wishlist: [],
+// A persistência é feita por usuário logado em src/hooks/useUserCountries.ts
+// (chave `mmv:countries:{userId}`), não mais de forma global.
+export const useCountryStore = create<CountryState>()((set, get) => ({
+  visited: [],
+  wishlist: [],
 
-      toggleVisited: (id) => {
-        if (!isCountry(id)) return
-        set((s) => {
-          const visited = s.visited.includes(id)
-            ? s.visited.filter((v) => v !== id)
-            : [...s.visited, id]
-          // marcar como visitado remove da wishlist
-          const wishlist = visited.includes(id)
-            ? s.wishlist.filter((w) => w !== id)
-            : s.wishlist
-          return { visited, wishlist }
-        })
-      },
+  toggleVisited: (id) => {
+    if (!isCountry(id)) return
+    set((s) => {
+      const visited = s.visited.includes(id)
+        ? s.visited.filter((v) => v !== id)
+        : [...s.visited, id]
+      // marcar como visitado remove da wishlist
+      const wishlist = visited.includes(id)
+        ? s.wishlist.filter((w) => w !== id)
+        : s.wishlist
+      return { visited, wishlist }
+    })
+  },
 
-      toggleWishlist: (id) => {
-        if (!isCountry(id)) return
-        set((s) => {
-          if (s.visited.includes(id)) return s
-          return {
-            wishlist: s.wishlist.includes(id)
-              ? s.wishlist.filter((w) => w !== id)
-              : [...s.wishlist, id],
-          }
-        })
-      },
+  toggleWishlist: (id) => {
+    if (!isCountry(id)) return
+    set((s) => {
+      if (s.visited.includes(id)) return s
+      return {
+        wishlist: s.wishlist.includes(id)
+          ? s.wishlist.filter((w) => w !== id)
+          : [...s.wishlist, id],
+      }
+    })
+  },
 
-      statusOf: (id) => {
-        const s = get()
-        if (s.visited.includes(id)) return 'visited'
-        if (s.wishlist.includes(id)) return 'wishlist'
-        return 'none'
-      },
+  statusOf: (id) => {
+    const s = get()
+    if (s.visited.includes(id)) return 'visited'
+    if (s.wishlist.includes(id)) return 'wishlist'
+    return 'none'
+  },
 
-      hydrate: (visited, wishlist) =>
-        set({
-          visited: visited.filter(isCountry),
-          wishlist: wishlist.filter(isCountry),
-        }),
-
-      reset: () => set({ visited: [], wishlist: [] }),
+  hydrate: (visited, wishlist) =>
+    set({
+      visited: visited.filter(isCountry),
+      wishlist: wishlist.filter(isCountry),
     }),
-    {
-      name: 'meu-mundo-visitado:v1',
-      version: 1,
-      partialize: (s) => ({ visited: s.visited, wishlist: s.wishlist }),
-    },
-  ),
-)
+
+  reset: () => set({ visited: [], wishlist: [] }),
+}))
